@@ -59,6 +59,18 @@ export async function createQuestForNode(
     throw new Error(`Cannot generate quest for node '${nodeId}': node is currently LOCKED.`);
   }
 
+  // Idempotency: Return existing active quest for this node if already in progress
+  const existingQuest = Array.from(questStore.values()).find(
+    (q) =>
+      q.userId === userId &&
+      q.roadmapId === roadmapId &&
+      q.nodeId === nodeId &&
+      q.status === "IN_PROGRESS"
+  );
+  if (existingQuest) {
+    return existingQuest;
+  }
+
   const provider = new MockAIProvider();
   const questData: AiQuestCandidate = provider.buildSampleQuest(node.title);
 

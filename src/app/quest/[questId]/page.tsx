@@ -91,6 +91,7 @@ export default function QuestWorkspacePage({ params }: PageProps) {
   const completedCount = tasks.filter((t) => t.completed).length;
   const progressPercent = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
   const isCompleted = quest?.status === "COMPLETED";
+  const roadmapHref = quest?.roadmapId ? `/roadmap?roadmapId=${encodeURIComponent(quest.roadmapId)}` : "/roadmap";
 
   if (loading) {
     return (
@@ -128,7 +129,7 @@ export default function QuestWorkspacePage({ params }: PageProps) {
       <nav className="border-b border-[#1B1E21] bg-[#0B0D0F]/80 backdrop-blur-md px-6 py-3 sticky top-0 z-40 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link
-            href="/roadmap"
+            href={roadmapHref}
             className="flex items-center gap-2 text-xs font-mono text-[#85898F] hover:text-[#F2F2EE] transition-colors px-2 py-1 rounded hover:bg-[#101316]"
             id="quest-back-link"
           >
@@ -186,7 +187,7 @@ export default function QuestWorkspacePage({ params }: PageProps) {
                   </div>
                 )}
                 <Link
-                  href="/roadmap"
+                  href={roadmapHref}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#8DDC9A] hover:bg-[#8DDC9A]/90 text-black text-xs font-mono font-bold transition-transform active:scale-95"
                 >
                   <span>View Updated Roadmap</span>

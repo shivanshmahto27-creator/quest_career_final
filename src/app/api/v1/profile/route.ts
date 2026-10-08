@@ -8,7 +8,15 @@ import { getAuthUser } from "../../../../lib/auth/session.ts";
 import { apiSuccess, apiError } from "../../../../lib/api/response.ts";
 import { DEMO_PROFILE } from "../../../../lib/db/fixtures.ts";
 
-let activeProfile = { ...DEMO_PROFILE };
+const globalProfileStore = globalThis as unknown as {
+  __careerQuestActiveProfile?: typeof DEMO_PROFILE;
+};
+
+if (!globalProfileStore.__careerQuestActiveProfile) {
+  globalProfileStore.__careerQuestActiveProfile = { ...DEMO_PROFILE };
+}
+
+let activeProfile = globalProfileStore.__careerQuestActiveProfile;
 
 export async function GET(req: Request) {
   try {
@@ -37,10 +45,11 @@ export async function PATCH(req: Request) {
     }
 
     activeProfile = {
-      ...activeProfile,
+      ...globalProfileStore.__careerQuestActiveProfile,
       ...body,
       userId: user.id,
     };
+    globalProfileStore.__careerQuestActiveProfile = activeProfile;
 
     return apiSuccess({
       profile: activeProfile,

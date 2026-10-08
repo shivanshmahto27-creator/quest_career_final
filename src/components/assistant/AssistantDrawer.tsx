@@ -44,7 +44,19 @@ export function AssistantDrawer({
       if (conversation) return;
       try {
         setLoading(true);
-        const conv = await assistantApi.createConversation(roadmapId);
+        let targetRoadmapId = roadmapId;
+        if (!targetRoadmapId || targetRoadmapId === "roadmap_default") {
+          try {
+            const rmRes = await fetch("/api/v1/roadmap");
+            if (rmRes.ok) {
+              const rmJson = await rmRes.json();
+              targetRoadmapId = rmJson.data?.id || targetRoadmapId;
+            }
+          } catch {
+            // Ignore
+          }
+        }
+        const conv = await assistantApi.createConversation(targetRoadmapId || "default");
         setConversation(conv);
       } catch (err: unknown) {
         console.error("Failed to initialize conversation", err);

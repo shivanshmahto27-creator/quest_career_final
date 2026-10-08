@@ -28,7 +28,22 @@ export default function AssistantPage() {
     async function init() {
       try {
         setLoading(true);
-        const conv = await assistantApi.createConversation("roadmap_default");
+        const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+        let resolvedRoadmapId = urlParams?.get("roadmapId") || urlParams?.get("id");
+
+        if (!resolvedRoadmapId) {
+          try {
+            const rmRes = await fetch("/api/v1/roadmap");
+            if (rmRes.ok) {
+              const rmJson = await rmRes.json();
+              resolvedRoadmapId = rmJson.data?.id;
+            }
+          } catch {
+            // Ignore fetch error, will fallback
+          }
+        }
+
+        const conv = await assistantApi.createConversation(resolvedRoadmapId || "default");
         setConversation(conv);
       } catch (err: unknown) {
         console.error("Failed to initialize conversation", err);

@@ -10,57 +10,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
-    ],
-    "/onboarding/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/onboarding/page.js"
-    ],
-    "/api/v1/roadmap/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/v1/roadmap/route.js"
-    ],
-    "/roadmap/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/roadmap/page.css",
-      "static/chunks/app/roadmap/page.js"
-    ],
-    "/api/v1/roadmap/[roadmapId]/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/v1/roadmap/[roadmapId]/route.js"
-    ],
-    "/api/v1/roadmap/[roadmapId]/nodes/[nodeId]/quest/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/v1/roadmap/[roadmapId]/nodes/[nodeId]/quest/route.js"
-    ],
-    "/quest/[questId]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/quest/[questId]/page.js"
-    ],
-    "/api/v1/quests/[questId]/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/v1/quests/[questId]/route.js"
-    ],
-    "/api/v1/assistant/conversations/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/v1/assistant/conversations/route.js"
-    ],
-    "/api/v1/assistant/conversations/[conversationId]/messages/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/v1/assistant/conversations/[conversationId]/messages/route.js"
-    ],
-    "/assistant/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/assistant/page.js"
     ]
   }
 }

@@ -232,6 +232,7 @@ export default function RoadmapPage() {
                   action={roadmap.graphResult.nextBestAction}
                   onFocusNode={handleFocusNextBestAction}
                   onStartQuest={handleStartQuest}
+                  isUpdating={updating}
                 />
               </div>
 

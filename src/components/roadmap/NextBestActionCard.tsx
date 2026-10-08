@@ -8,12 +8,14 @@ interface NextBestActionCardProps {
   action: NextBestAction | null;
   onFocusNode: (nodeId: string) => void;
   onStartQuest?: (nodeId: string) => void;
+  isUpdating?: boolean;
 }
 
 export function NextBestActionCard({
   action,
   onFocusNode,
   onStartQuest,
+  isUpdating = false,
 }: NextBestActionCardProps) {
   if (!action) return null;
 
@@ -56,8 +58,9 @@ export function NextBestActionCard({
 
         {onStartQuest && (
           <button
+            disabled={isUpdating}
             onClick={() => onStartQuest(action.nodeId)}
-            className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-[#D8FF5A] hover:bg-[#D8FF5A]/90 text-black text-xs font-mono font-bold tracking-wider flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer shadow-[0_2px_12px_rgba(216,255,90,0.2)]"
+            className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-[#D8FF5A] hover:bg-[#D8FF5A]/90 text-black text-xs font-mono font-bold tracking-wider flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer shadow-[0_2px_12px_rgba(216,255,90,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>Start Quest</span>
             <ArrowRight className="w-3.5 h-3.5" />
