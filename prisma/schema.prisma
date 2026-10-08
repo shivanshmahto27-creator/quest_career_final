@@ -1,0 +1,479 @@
+// Career Quest — Database Schema Specification
+// Version: 1.1 (Frozen for Implementation)
+// Source: DATABASE_SCHEMA_Career_Quest_v1.1_PERFECT.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------------------
+// 1. IDENTITY & PROFILE
+// --------------------------------------------------------
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String?
+  avatarUrl    String?   @map("avatar_url")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  careerProfile         CareerProfile?
+  userSkills            UserSkill[]
+  skillStateHistory     SkillStateHistory[]
+  roadmaps              Roadmap[]
+  roadmapGenerations    RoadmapGeneration[]
+  quests                Quest[]
+  evidence              Evidence[]
+  assessments           ProficiencyAssessment[]
+  changeEvents          RoadmapChangeEvent[]
+  conversations         AssistantConversation[]
+
+  @@map("users")
+}
+
+model CareerProfile {
+  id                   String    @id @default(uuid())
+  userId               String    @unique @map("user_id")
+  targetRole           String    @map("target_role")
+  targetSpecialization String?   @map("target_specialization")
+  targetCompanyType    String?   @map("target_company_type")
+  locationPreference   String?   @map("location_preference")
+  weeklyHours          Int       @map("weekly_hours")
+  deadline             DateTime? @map("deadline")
+  experienceSummary    String?   @map("experience_summary")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  deletedAt            DateTime? @map("deleted_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmaps Roadmap[]
+
+  @@map("career_profiles")
+}
+
+// --------------------------------------------------------
+// 2. SKILL CATALOG & USER SKILLS
+// --------------------------------------------------------
+
+model Skill {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  category    String?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  userSkills        UserSkill[]
+  skillStateHistory SkillStateHistory[]
+  roadmapNodes      RoadmapNode[]
+  nodeSnapshots     RoadmapNodeSkillSnapshot[]
+  assessments       ProficiencyAssessment[]
+
+  @@map("skills")
+}
+
+model UserSkill {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  skillId        String   @map("skill_id")
+  proficiency    Int      @default(0) // 0 (UNKNOWN) to 5 (EXPERT)
+  status         String   @default("UNKNOWN") // UNKNOWN, ACTIVE, ALREADY_KNOWN
+  source         String   @default("USER_INPUT")
+  lastAssessedAt DateTime @default(now()) @map("last_assessed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+  @@map("user_skills")
+}
+
+model SkillStateHistory {
+  id                  String   @id @default(uuid())
+  userId              String   @map("user_id")
+  skillId             String   @map("skill_id")
+  previousProficiency Int      @map("previous_proficiency")
+  newProficiency      Int      @map("new_proficiency")
+  previousStatus      String   @map("previous_status")
+  newStatus           String   @map("new_status")
+  reason              String // USER_UPDATE, QUEST_EVIDENCE, MANUAL_REASSESSMENT, ASSISTANT_PROPOSAL_CONFIRMED
+  sourceId            String?  @map("source_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([userId, skillId])
+  @@map("skill_state_history")
+}
+
+// --------------------------------------------------------
+// 3. ROADMAPS & GENERATIONS
+// --------------------------------------------------------
+
+model Roadmap {
+  id                  String    @id @default(uuid())
+  userId              String    @map("user_id")
+  careerProfileId     String    @map("career_profile_id")
+  version             Int       @default(1)
+  status              String    @default("GENERATING") // GENERATING, VALIDATED, ACTIVE, SUPERSEDED, FAILED
+  targetRoleSnapshot  String    @map("target_role_snapshot")
+  weeklyHoursSnapshot Int       @map("weekly_hours_snapshot")
+  estimatedMinWeeks   Int?      @map("estimated_min_weeks")
+  estimatedMaxWeeks   Int?      @map("estimated_max_weeks")
+  activeRevision      Int       @default(1) @map("active_revision")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  activatedAt         DateTime? @map("activated_at")
+  supersededAt        DateTime? @map("superseded_at")
+
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  careerProfile CareerProfile        @relation(fields: [careerProfileId], references: [id], onDelete: Cascade)
+  generations   RoadmapGeneration[]
+  phases        RoadmapPhase[]
+  nodes         RoadmapNode[]
+  dependencies  RoadmapNodeDependency[]
+  timelines     RoadmapTimeline[]
+  nextActions   NextBestAction[]
+  changeEvents  RoadmapChangeEvent[]
+  conversations AssistantConversation[]
+
+  @@unique([userId, version])
+  @@index([userId, status])
+  @@map("roadmaps")
+}
+
+model RoadmapGeneration {
+  id                  String    @id @default(uuid())
+  roadmapId           String?   @map("roadmap_id")
+  userId              String    @map("user_id")
+  requestId           String    @map("request_id")
+  idempotencyKey      String    @unique @map("idempotency_key")
+  modelProvider       String?   @map("model_provider")
+  modelName           String?   @map("model_name")
+  promptVersion       String?   @map("prompt_version")
+  outputSchemaVersion String    @default("v1.0") @map("output_schema_version")
+  status              String    @default("QUEUED") // QUEUED, RUNNING, SUCCEEDED, VALIDATION_FAILED, FAILED, CANCELLED
+  validationStatus    String    @default("PENDING") // PENDING, PASSED, FAILED
+  errorCode           String?   @map("error_code")
+  startedAt           DateTime  @default(now()) @map("started_at")
+  completedAt         DateTime? @map("completed_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmap Roadmap? @relation(fields: [roadmapId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@map("roadmap_generations")
+}
+
+// --------------------------------------------------------
+// 4. PHASES, NODES & DEPENDENCIES
+// --------------------------------------------------------
+
+model RoadmapPhase {
+  id                String   @id @default(uuid())
+  roadmapId         String   @map("roadmap_id")
+  name              String
+  description       String?
+  sequence          Int
+  estimatedMinWeeks Int?     @map("estimated_min_weeks")
+  estimatedMaxWeeks Int?     @map("estimated_max_weeks")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  roadmap   Roadmap                @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  nodes     RoadmapNode[]
+  timelines RoadmapPhaseTimeline[]
+
+  @@unique([roadmapId, sequence])
+  @@map("roadmap_phases")
+}
+
+model RoadmapNode {
+  id                  String    @id @default(uuid())
+  roadmapId           String    @map("roadmap_id")
+  phaseId             String    @map("phase_id")
+  skillId             String?   @map("skill_id")
+  title               String
+  description         String?
+  nodeType            String    @default("SKILL") @map("node_type") // SKILL, PROJECT, MILESTONE, INTERVIEW, TARGET
+  requiredProficiency Int?      @default(3) @map("required_proficiency")
+  estimatedHours      Int?      @default(10) @map("estimated_hours")
+  importance          Int?      @default(3)
+  sequence            Int?      @default(1)
+  status              String    @default("LOCKED") // LOCKED, AVAILABLE, IN_PROGRESS, COMPLETED, MASTERED, ALREADY_KNOWN
+  whyItMatters        String?   @map("why_it_matters")
+  unlockSummary       String?   @map("unlock_summary")
+  revision            Int       @default(1)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+
+  roadmap        Roadmap                    @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  phase          RoadmapPhase               @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  skill          Skill?                     @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  skillSnapshots RoadmapNodeSkillSnapshot[]
+  quests         Quest[]
+  evidence       Evidence[]
+  nextActions    NextBestAction[]
+
+  // Self-referential graph edges
+  prerequisiteOf RoadmapNodeDependency[] @relation("PrerequisiteNodes")
+  dependentOn    RoadmapNodeDependency[] @relation("DependentNodes")
+
+  @@index([roadmapId, phaseId])
+  @@index([roadmapId, status])
+  @@map("roadmap_nodes")
+}
+
+model RoadmapNodeSkillSnapshot {
+  id                  String   @id @default(uuid())
+  roadmapNodeId       String   @map("roadmap_node_id")
+  skillId             String   @map("skill_id")
+  userProficiency     Int      @map("user_proficiency")
+  requiredProficiency Int      @map("required_proficiency")
+  proficiencyGap      Int      @map("proficiency_gap")
+  userStatus          String   @map("user_status")
+  calculatedAt        DateTime @default(now()) @map("calculated_at")
+  revision            Int      @default(1)
+
+  node  RoadmapNode @relation(fields: [roadmapNodeId], references: [id], onDelete: Cascade)
+  skill Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([roadmapNodeId, revision])
+  @@map("roadmap_node_skill_snapshots")
+}
+
+model RoadmapNodeDependency {
+  id                 String   @id @default(uuid())
+  roadmapId          String   @map("roadmap_id")
+  prerequisiteNodeId String   @map("prerequisite_node_id")
+  dependentNodeId    String   @map("dependent_node_id")
+  relationshipType   String   @default("PREREQUISITE") @map("relationship_type") // PREREQUISITE, RECOMMENDED
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  roadmap          Roadmap     @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  prerequisiteNode RoadmapNode @relation("PrerequisiteNodes", fields: [prerequisiteNodeId], references: [id], onDelete: Cascade)
+  dependentNode    RoadmapNode @relation("DependentNodes", fields: [dependentNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([prerequisiteNodeId, dependentNodeId])
+  @@index([roadmapId])
+  @@map("roadmap_node_dependencies")
+}
+
+// --------------------------------------------------------
+// 5. TIMELINES & NEXT BEST ACTIONS
+// --------------------------------------------------------
+
+model RoadmapTimeline {
+  id                String   @id @default(uuid())
+  roadmapId         String   @map("roadmap_id")
+  revision          Int
+  estimatedMinWeeks Int      @map("estimated_min_weeks")
+  estimatedMaxWeeks Int      @map("estimated_max_weeks")
+  calculatedAt      DateTime @default(now()) @map("calculated_at")
+
+  roadmap Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+
+  @@unique([roadmapId, revision])
+  @@map("roadmap_timelines")
+}
+
+model RoadmapPhaseTimeline {
+  id              String   @id @default(uuid())
+  roadmapPhaseId  String   @map("roadmap_phase_id")
+  roadmapRevision Int      @map("roadmap_revision")
+  startWeek       Int      @map("start_week")
+  endWeek         Int      @map("end_week")
+  estimatedHours  Int      @map("estimated_hours")
+  calculatedAt    DateTime @default(now()) @map("calculated_at")
+
+  phase RoadmapPhase @relation(fields: [roadmapPhaseId], references: [id], onDelete: Cascade)
+
+  @@index([roadmapPhaseId, roadmapRevision])
+  @@map("roadmap_phase_timelines")
+}
+
+model NextBestAction {
+  id              String    @id @default(uuid())
+  roadmapId       String    @map("roadmap_id")
+  roadmapNodeId   String    @map("roadmap_node_id")
+  roadmapRevision Int       @map("roadmap_revision")
+  reason          String
+  score           Float?
+  status          String    @default("ACTIVE") // ACTIVE, SUPERSEDED, COMPLETED
+  calculatedAt    DateTime  @default(now()) @map("calculated_at")
+  completedAt     DateTime? @map("completed_at")
+
+  roadmap Roadmap     @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  node    RoadmapNode @relation(fields: [roadmapNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([roadmapId, roadmapRevision])
+  @@map("next_best_actions")
+}
+
+// --------------------------------------------------------
+// 6. QUESTS, TASKS & EVIDENCE
+// --------------------------------------------------------
+
+model Quest {
+  id                 String    @id @default(uuid())
+  roadmapNodeId      String    @map("roadmap_node_id")
+  userId             String    @map("user_id")
+  title              String
+  objective          String
+  estimatedHours     Int       @default(2) @map("estimated_hours")
+  status             String    @default("AVAILABLE") // AVAILABLE, IN_PROGRESS, COMPLETED, ABANDONED
+  githubIdea         String?   @map("github_idea")
+  interviewQuestions Json?     @map("interview_questions")
+  completionNotes    String?   @map("completion_notes")
+  revision           Int       @default(1)
+  startedAt          DateTime? @map("started_at")
+  completedAt        DateTime? @map("completed_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+
+  node     RoadmapNode @relation(fields: [roadmapNodeId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks    QuestTask[]
+  evidence Evidence[]
+
+  @@index([roadmapNodeId, status])
+  @@map("quests")
+}
+
+model QuestTask {
+  id               String    @id @default(uuid())
+  questId          String    @map("quest_id")
+  title            String
+  description      String?
+  sequence         Int
+  estimatedMinutes Int?      @map("estimated_minutes")
+  completed        Boolean   @default(false)
+  completedAt      DateTime? @map("completed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([questId, sequence])
+  @@map("quest_tasks")
+}
+
+model Evidence {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  questId       String?   @map("quest_id")
+  roadmapNodeId String    @map("roadmap_node_id")
+  type          String // GITHUB_REPOSITORY, DEPLOYED_PROJECT, PROJECT_SUBMISSION, QUIZ_RESULT, INTERVIEW_PRACTICE, MANUAL
+  title         String
+  url           String?
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest Quest?     @relation(fields: [questId], references: [id], onDelete: SetNull)
+  node RoadmapNode @relation(fields: [roadmapNodeId], references: [id], onDelete: Cascade)
+
+  @@index([userId, roadmapNodeId])
+  @@map("evidence")
+}
+
+model ProficiencyAssessment {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  skillId        String   @map("skill_id")
+  previousLevel  Int      @map("previous_level")
+  suggestedLevel Int      @map("suggested_level")
+  confirmedLevel Int      @map("confirmed_level")
+  source         String // ASSESSMENT, EVIDENCE, USER_DECLARATION
+  evidenceId     String?  @map("evidence_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@index([userId, skillId])
+  @@map("proficiency_assessments")
+}
+
+model RoadmapChangeEvent {
+  id        String   @id @default(uuid())
+  roadmapId String   @map("roadmap_id")
+  userId    String   @map("user_id")
+  revision  Int
+  eventType String   @map("event_type") // ROADMAP_CREATED, ROADMAP_ACTIVATED, SKILL_UPDATED, NODE_UNLOCKED, NODE_LOCKED, QUEST_COMPLETED, TIMELINE_RECALCULATED, NEXT_ACTION_CHANGED, ROADMAP_REROUTED
+  source    String // USER_SKILL_UPDATE, QUEST_COMPLETION, AI_REGENERATION
+  summary   String
+  payload   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  roadmap Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roadmapId, revision])
+  @@map("roadmap_change_events")
+}
+
+// --------------------------------------------------------
+// 7. ASSISTANT CONVERSATIONS & PROPOSALS
+// --------------------------------------------------------
+
+model AssistantConversation {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  roadmapId String    @map("roadmap_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmap   Roadmap             @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  messages  AssistantMessage[]
+  proposals AssistantProposal[]
+
+  @@index([userId, roadmapId])
+  @@map("assistant_conversations")
+}
+
+model AssistantMessage {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  role           String // USER, ASSISTANT, SYSTEM
+  content        String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("assistant_messages")
+}
+
+model AssistantProposal {
+  id             String    @id @default(uuid())
+  conversationId String    @map("conversation_id")
+  roadmapId      String    @map("roadmap_id")
+  proposalType   String    @map("proposal_type") // UPDATE_PROFICIENCY, ADD_SKILL, REMOVE_SKILL, REORDER_PATH, CHANGE_CONSTRAINT, REGENERATE_ROADMAP
+  payload        Json
+  explanation    String
+  status         String    @default("PENDING") // PENDING, CONFIRMED, REJECTED, EXPIRED
+  createdAt      DateTime  @default(now()) @map("created_at")
+  confirmedAt    DateTime? @map("confirmed_at")
+  expiresAt      DateTime? @map("expires_at")
+
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([roadmapId, status])
+  @@map("assistant_proposals")
+}

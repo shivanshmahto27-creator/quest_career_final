@@ -1,0 +1,11 @@
+{
+  "/api/v1/roadmap/route": "app/api/v1/roadmap/route.js",
+  "/api/v1/roadmap/[roadmapId]/nodes/[nodeId]/quest/route": "app/api/v1/roadmap/[roadmapId]/nodes/[nodeId]/quest/route.js",
+  "/api/v1/quests/[questId]/route": "app/api/v1/quests/[questId]/route.js",
+  "/api/v1/assistant/conversations/route": "app/api/v1/assistant/conversations/route.js",
+  "/onboarding/page": "app/onboarding/page.js",
+  "/page": "app/page.js",
+  "/quest/[questId]/page": "app/quest/[questId]/page.js",
+  "/roadmap/page": "app/roadmap/page.js",
+  "/assistant/page": "app/assistant/page.js"
+}
