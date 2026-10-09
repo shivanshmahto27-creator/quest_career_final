@@ -1,1 +1,14 @@
+# Dependencies
 node_modules
+
+# Next.js build output
+.next/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Private keys
+*.pem
+*.key
